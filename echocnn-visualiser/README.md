@@ -1,190 +1,173 @@
-# CNN Audio Visualizer
+# 🎵 EchoCNN Audio Visualizer
 
-A powerful web application for visualizing CNN (Convolutional Neural Network) feature maps and predictions for audio classification. Built with Next.js, TypeScript, and Tailwind CSS.
+A powerful, interactive web application for visualizing and analyzing audio through Convolutional Neural Networks (CNNs). Explore how your CNN model processes audio signals with real-time feature map visualization, audio playback, and detailed layer analysis.
 
-## 🎵 Features
+![EchoCNN Audio Visualizer](https://img.shields.io/badge/Next.js-15.4.4-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
+![React](https://img.shields.io/badge/React-18.0-red?style=for-the-badge&logo=react)
 
-### Core Functionality
-- **Audio Classification**: Upload WAV files and get real-time predictions
-- **Feature Map Visualization**: Interactive visualization of CNN layer outputs
-- **Input Spectrogram**: Display of audio spectrogram data
-- **Waveform Display**: Visual representation of audio waveforms
+## ✨ Features
 
-### 🎮 Audio Playback (NEW!)
-- **Interactive Audio Player**: Full-featured audio controls with play/pause, seek, and volume
-- **Click-to-Seek Waveform**: Click anywhere on the waveform to jump to that time
-- **Real-time Synchronization**: Waveform and player stay in sync
-- **Audio Information**: Display file format, sample rate, and duration
-- **Download Support**: Download the original audio file
+### 🎧 Audio Playback & Timeline Control
+- **Synchronized Audio-Visual Experience**: Play your uploaded audio while exploring feature maps
+- **Interactive Timeline**: Click on the waveform to jump to specific time points
+- **Real-time Progress Tracking**: Visual indicator shows current playback position
+- **Audio Controls**: Play, pause, volume control, and download functionality
 
-### 🔍 Interactive Feature Map Exploration (NEW!)
-- **Click-to-Zoom**: Click any feature map to see it in full detail with zoom/pan controls
+### 🔍 Interactive Feature Map Exploration
+- **Click-to-Zoom**: Click any feature map to view it in full detail with zoom and pan
 - **Hover Tooltips**: See exact pixel values when hovering over feature maps
-- **Layer Comparison**: Side-by-side view of different layers with synchronized navigation
-- **Value Range Display**: Show min/max values and statistics for each feature map
+- **Layer Comparison**: Side-by-side view of different CNN layers
+- **Value Range Display**: Min/max values for each feature map with explanations
 - **Export Individual Maps**: Save specific feature maps as high-quality PNG images
 
-### 🎯 Interactive Features
-- **Responsive Design**: Works on desktop and mobile devices
-- **Real-time Updates**: Live updates during audio playback
-- **Visual Feedback**: Hover effects and position indicators
+### 📊 Comprehensive Analysis
+- **Input Spectrogram Visualization**: See how your audio is processed into spectrograms
+- **Layer-by-Layer Analysis**: Explore each convolutional layer's output
+- **Prediction Confidence**: View model predictions with confidence scores
+- **Statistical Insights**: Mean, standard deviation, and range for each feature map
+
+### 🎨 Modern UI/UX
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Intuitive Interface**: Clean, modern design with clear navigation
+- **Context-Aware Help**: Tooltips and explanations for technical concepts
 - **Accessibility**: Keyboard navigation and screen reader support
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
 
 ### Installation
-```bash
-# Clone the repository
-git clone <repository-url>
-cd echocnn-visualiser
 
-# Install dependencies
-npm install
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/echocnn-visualiser.git
+   cd echocnn-visualiser
+   ```
 
-# Start the development server
-npm run dev
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Usage
+
 1. **Upload Audio**: Click "Choose File" and select a WAV file
 2. **View Predictions**: See the model's top predictions with confidence scores
-3. **Explore Feature Maps**: Examine CNN layer outputs and activations
-4. **Play Audio**: Use the audio player to listen and analyze
-5. **Interactive Analysis**: Click on the waveform to jump to specific times
-6. **Detailed Feature Maps**: Click any feature map to zoom and explore in detail
-7. **Compare Layers**: Use the "Compare Layers" button to view multiple layers side-by-side
-8. **Export Visualizations**: Save feature maps as high-quality images
+3. **Explore Feature Maps**: Click on any feature map to zoom in
+4. **Compare Layers**: Use the "Compare Layers" button for side-by-side analysis
+5. **Export Results**: Save individual feature maps as images
 
-## 🛠 Technical Stack
-
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **Styling**: Tailwind CSS, Radix UI
-- **Audio**: HTML5 Audio API, Web Audio API
-- **Visualization**: SVG-based custom components
-- **Icons**: Lucide React
-
-## 📁 Project Structure
+## 🏗️ Project Structure
 
 ```
-src/
-├── app/
-│   ├── layout.tsx          # Root layout
-│   └── page.tsx            # Main application page
-├── components/
-│   ├── AudioPlayer.tsx     # Audio playback controls
-│   ├── FeatureMap.tsx      # CNN feature map visualization
-│   ├── Waveform.tsx        # Interactive waveform display
-│   ├── ColorScale.tsx      # Color scale for visualizations
-│   └── ui/                 # Reusable UI components
-├── lib/
-│   ├── colors.ts           # Color mapping utilities
-│   └── utils.ts            # General utilities
-└── styles/
-    └── globals.css         # Global styles
+echocnn-visualiser/
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx          # Root layout component
+│   │   └── page.tsx            # Main application page
+│   ├── components/
+│   │   ├── AudioPlayer.tsx     # Audio playback component
+│   │   ├── FeatureMap.tsx      # Individual feature map display
+│   │   ├── FeatureMapModal.tsx # Detailed feature map view
+│   │   ├── LayerComparison.tsx # Side-by-side layer comparison
+│   │   ├── Waveform.tsx        # Audio waveform visualization
+│   │   └── ui/                 # Reusable UI components
+│   ├── lib/
+│   │   ├── colors.ts           # Color mapping utilities
+│   │   └── utils.ts            # General utilities
+│   └── styles/
+│       └── globals.css         # Global styles
+├── public/                     # Static assets
+├── docs/                       # Feature documentation
+└── README.md                   # This file
 ```
 
-## 🎨 Audio Playback Feature
+## 🎯 Key Components
 
-The new audio playback feature provides a complete audio analysis experience:
+### AudioPlayer
+- HTML5 audio element with custom controls
+- Synchronized timeline with waveform
+- Volume control and download functionality
 
-### Key Components
-- **AudioPlayer**: Full-featured audio controls
-- **Interactive Waveform**: Click-to-seek functionality
-- **Synchronized State**: Real-time updates between components
+### FeatureMap
+- Interactive SVG-based visualization
+- Hover tooltips with pixel values
+- Click-to-zoom functionality
+- Min/max value display with explanations
 
-### Features
-- Play/pause controls
-- Seek bar with drag functionality
-- Volume control with mute toggle
-- Skip forward/backward (10 seconds)
-- Download original audio file
-- Real-time position indicator on waveform
-- Click-to-seek on waveform
+### FeatureMapModal
+- Full-screen detailed view
+- Zoom and pan controls
+- Export functionality
+- Statistical information
 
-For detailed documentation, see [AUDIO_PLAYBACK_FEATURE.md](./AUDIO_PLAYBACK_FEATURE.md)
+### LayerComparison
+- Grid layout for multiple layers
+- Synchronized zoom and pan
+- Cross-layer hover tooltips
+- Batch export capabilities
 
-## 🔍 Interactive Feature Map Exploration Feature
+## 🔧 Technical Details
 
-The interactive feature map exploration feature provides detailed analysis tools for examining CNN layer outputs:
+### Built With
+- **Next.js 15.4.4** - React framework with App Router
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Utility-first CSS framework
+- **Radix UI** - Accessible UI primitives
+- **Lucide React** - Beautiful icons
+- **HTML5 Canvas API** - High-performance rendering
 
-### Key Components
-- **FeatureMapModal**: Detailed zoom/pan view with canvas rendering
-- **LayerComparison**: Side-by-side comparison of multiple layers
-- **Enhanced FeatureMap**: Hover tooltips and click-to-zoom functionality
+### Key Technologies
+- **SVG Rendering** - For feature map visualization
+- **Canvas API** - For high-performance modal rendering
+- **HTML5 Audio API** - For audio playback
+- **Blob URLs** - For audio file handling
 
-### Features
-- Click-to-zoom with zoom controls (50% to 500%)
-- Pan navigation with drag functionality
-- Hover tooltips showing exact pixel values
-- Layer comparison with synchronized navigation
-- Value range display and statistical information
-- Export feature maps as high-quality PNG images
-- Cross-layer pixel value comparison
+## 📚 Documentation
 
-For detailed documentation, see [INTERACTIVE_FEATURE_MAPS.md](./INTERACTIVE_FEATURE_MAPS.md)
-
-## 🔧 Development
-
-### Available Scripts
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run typecheck    # Run TypeScript checks
-```
-
-### Adding New Features
-1. Create components in `src/components/`
-2. Add types to component interfaces
-3. Update main page in `src/app/page.tsx`
-4. Add documentation for new features
+- [Audio Playback Feature](./AUDIO_PLAYBACK_FEATURE.md) - Detailed guide for audio functionality
+- [Interactive Feature Maps](./INTERACTIVE_FEATURE_MAPS.md) - Complete feature map exploration guide
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Setup
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Update documentation
-6. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Built with the [T3 Stack](https://create.t3.gg/)
-- Audio processing powered by HTML5 Audio API
-- Icons from [Lucide React](https://lucide.dev/)
+- Built with [Next.js](https://nextjs.org/)
+- Icons from [Lucide](https://lucide.dev/)
+- UI components from [Radix UI](https://www.radix-ui.com/)
+- Styling with [Tailwind CSS](https://tailwindcss.com/)
 
-## What's next? How do I make an app with this?
+## 📞 Support
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+If you have any questions or need help:
+- Open an [issue](https://github.com/yourusername/echocnn-visualiser/issues)
+- Check the [documentation](./docs/)
+- Join our [Discussions](https://github.com/yourusername/echocnn-visualiser/discussions)
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+---
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
-
-## Learn More
-
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
-
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
-
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
-
-## How do I deploy this?
-
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+**Made with ❤️ for the audio ML community**
