@@ -41,9 +41,13 @@ export default function TrainingAnalysisPage() {
         if (response.ok) {
           const data = await response.json();
           setTrainingAnalysis(data);
+        } else {
+          console.error('Training analysis data not found - status:', response.status);
+          // Set a fallback state or show error message
         }
       } catch (error) {
         console.error('Failed to load training analysis:', error);
+        // Set a fallback state or show error message
       }
     };
     loadTrainingAnalysis();
