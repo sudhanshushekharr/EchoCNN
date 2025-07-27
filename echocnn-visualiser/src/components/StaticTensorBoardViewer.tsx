@@ -51,32 +51,27 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
     const loadTensorBoardData = async () => {
       try {
         setIsLoading(true);
-        setError(null);
         
         const response = await fetch('/tensorboard_data/all_tensorboard_data.json');
         
         if (response.ok) {
           const data = await response.json();
           
-          if (data && data.runs && Object.keys(data.runs).length > 0) {
-            setTensorboardData(data);
-            
-            // Set default selections with null checks
-            if (data?.summary?.runs && data.summary.runs.length > 0) {
-              setSelectedRun(data.summary.runs[0]);
-              if (data.summary.available_metrics && data.summary.available_metrics.length > 0) {
-                setSelectedMetric(data.summary.available_metrics[0]);
-              }
+          setTensorboardData(data);
+          
+          // Set default selections with null checks
+          if (data?.summary?.runs && data.summary.runs.length > 0) {
+            setSelectedRun(data.summary.runs[0]);
+            if (data.summary.available_metrics && data.summary.available_metrics.length > 0) {
+              setSelectedMetric(data.summary.available_metrics[0]);
             }
-          } else {
-            setError('No TensorBoard data available');
           }
         } else {
-          setError(`Failed to load TensorBoard data (${response.status})`);
+          setError('Failed to load TensorBoard data');
         }
       } catch (err) {
         setError('Error loading TensorBoard data');
-        console.error('TensorBoard loading error:', err);
+        console.error(err);
       } finally {
         setIsLoading(false);
       }

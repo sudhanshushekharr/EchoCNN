@@ -95,7 +95,7 @@ const ESC50_EMOJI_MAP: Record<string, string> = {
 };
 
 const getEmojiForClass = (className: string): string => {
-  return ESC50_EMOJI_MAP[className.toLowerCase()] ?? "🎵";
+  return ESC50_EMOJI_MAP[className.toLowerCase()] || "🎵";
 };
 
 const findInputSpectrogram = (data: ApiResponse): LayerData | null => {
@@ -109,42 +109,38 @@ const findInputSpectrogram = (data: ApiResponse): LayerData | null => {
   );
 
   if (inputKeys.length > 0) {
-    const key = inputKeys[0] as keyof typeof data.visualization;
-    return data.visualization[key] ?? null;
+    return data.visualization[inputKeys[0]] || null;
   }
 
   // If no specific input spectrogram found, return the first available
   const sortedKeys = Object.keys(data.visualization).sort();
   if (sortedKeys.length > 0) {
-    const key = sortedKeys[0] as keyof typeof data.visualization;
-    return data.visualization[key] ?? null;
+    return data.visualization[sortedKeys[0]] || null;
   }
 
   return null;
 };
 
-const ensure2DArray = (data: unknown, shape?: number[]): number[][] => {
+const ensure2DArray = (data: any, shape?: number[]): number[][] => {
   if (!data) return [];
   
   // If it's already a 2D array, return it
   if (Array.isArray(data) && Array.isArray(data[0])) {
-    return data as number[][];
+    return data;
   }
   
   // If it's a 1D array, reshape it
   if (Array.isArray(data) && !Array.isArray(data[0])) {
     if (shape && shape.length === 2) {
       const [rows, cols] = shape;
-      if (rows && cols) {
-        const result = [];
-        for (let i = 0; i < rows; i++) {
-          result.push((data as number[]).slice(i * cols, (i + 1) * cols));
-        }
-        return result;
+      const result = [];
+      for (let i = 0; i < rows; i++) {
+        result.push(data.slice(i * cols, (i + 1) * cols));
       }
+      return result;
     }
     // If no shape provided, assume it's a single row
-    return [data as number[]];
+    return [data];
   }
   
   return [];
@@ -157,8 +153,10 @@ function splitLayers(visualization: VisualizationData) {
   Object.entries(visualization).forEach(([name, data]) => {
     if (name.includes('.')) {
       const [mainLayer] = name.split('.');
-      internals[mainLayer] ??= [];
-      internals[mainLayer]!.push([name, data]);
+      if (!internals[mainLayer]) {
+        internals[mainLayer] = [];
+      }
+      internals[mainLayer].push([name, data]);
     } else {
       main.push([name, data]);
     }

@@ -18,7 +18,7 @@ const ColorScale = ({
           width: `${width}px`,
           height: `${height}px`,
           background:
-            "linear-gradient(to right, rgb(51, 128, 255), rgb(255, 255, 255), rgb(255, 128, 51))",
+            "linear-gradient(to right, rgb(255, 128, 51), rgb(255, 255, 255), rgb(51,128, 255))",
         }}
       />
       <span className="text-xs text-stone-500">{max}</span>
