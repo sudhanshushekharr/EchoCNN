@@ -1,544 +1,409 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import AudioPlayer from "~/components/AudioPlayer";
-import ColorScale from "~/components/ColorScale";
-import FeatureMap from "~/components/FeatureMap";
-import FeatureMapModal from "~/components/FeatureMapModal";
-import LayerComparison from "~/components/LayerComparison";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Progress } from "~/components/ui/progress";
-import Waveform from "~/components/Waveform";
-import { GitCompare, Download } from "lucide-react";
-
-interface Prediction {
-  class: string;
-  confidence: number;
-}
-
-interface LayerData {
-  shape: number[];
-  values: number[][];
-}
-
-interface VisualizationData {
-  [layerName: string]: LayerData;
-}
-
-interface WaveformData {
-  values: number[];
-  sample_rate: number;
-  duration: number;
-}
-
-interface ApiResponse {
-  predictions: Prediction[];
-  visualization: VisualizationData;
-  input_spectrogram: LayerData;
-  waveform: WaveformData;
-}
-
-const ESC50_EMOJI_MAP: Record<string, string> = {
-  dog: "🐕",
-  rain: "🌧️",
-  crying_baby: "👶",
-  door_wood_knock: "🚪",
-  helicopter: "🚁",
-  rooster: "🐓",
-  sea_waves: "🌊",
-  sneezing: "🤧",
-  mouse_click: "🖱️",
-  chainsaw: "🪚",
-  pig: "🐷",
-  crackling_fire: "🔥",
-  clapping: "👏",
-  keyboard_typing: "⌨️",
-  siren: "🚨",
-  cow: "🐄",
-  crickets: "🦗",
-  breathing: "💨",
-  door_wood_creaks: "🚪",
-  car_horn: "📯",
-  frog: "🐸",
-  chirping_birds: "🐦",
-  coughing: "😷",
-  can_opening: "🥫",
-  engine: "🚗",
-  cat: "🐱",
-  water_drops: "💧",
-  footsteps: "👣",
-  washing_machine: "🧺",
-  train: "🚂",
-  hen: "🐔",
-  wind: "💨",
-  laughing: "😂",
-  vacuum_cleaner: "🧹",
-  church_bells: "🔔",
-  insects: "🦟",
-  pouring_water: "🚰",
-  brushing_teeth: "🪥",
-  clock_alarm: "⏰",
-  airplane: "✈️",
-  sheep: "🐑",
-  toilet_flush: "🚽",
-  snoring: "😴",
-  clock_tick: "⏱️",
-  fireworks: "🎆",
-  crow: "🐦‍⬛",
-  thunderstorm: "⛈️",
-  drinking_sipping: "🥤",
-  glass_breaking: "🔨",
-  hand_saw: "🪚",
-};
-
-const getEmojiForClass = (className: string): string => {
-  return ESC50_EMOJI_MAP[className] || "🔈";
-};
-
-const findInputSpectrogram = (data: ApiResponse): LayerData | null => {
-  // First check if it's directly in the response
-  if (data.input_spectrogram) {
-    return data.input_spectrogram;
-  }
-  
-  // Check if it's in the visualization object
-  if (data.visualization) {
-    const inputKeys = Object.keys(data.visualization).filter(key => 
-      key.toLowerCase().includes('input') || 
-      key.toLowerCase().includes('spectrogram') ||
-      key.toLowerCase().includes('spectro')
-    );
-    
-    if (inputKeys.length > 0) {
-      return data.visualization[inputKeys[0]] || null;
-    }
-    
-    // If no specific input keys found, try to find the first layer that might be the input
-    // Look for layers with larger dimensions (typical for input spectrograms)
-    const allKeys = Object.keys(data.visualization);
-    if (allKeys.length > 0) {
-      // Sort by shape size (largest first) - input spectrograms are usually larger
-      const sortedKeys = allKeys.sort((a, b) => {
-        const shapeA = data.visualization[a]?.shape || [];
-        const shapeB = data.visualization[b]?.shape || [];
-        const sizeA = shapeA.reduce((acc, val) => acc * val, 1);
-        const sizeB = shapeB.reduce((acc, val) => acc * val, 1);
-        return sizeB - sizeA; // Largest first
-      });
-      
-      // Return the largest layer as potential input spectrogram
-      return data.visualization[sortedKeys[0]] || null;
-    }
-  }
-  
-  return null;
-};
-
-const ensure2DArray = (data: any, shape?: number[]): number[][] => {
-  if (!data) return [];
-  
-  // If it's already a 2D array, return it
-  if (Array.isArray(data) && Array.isArray(data[0])) {
-    return data;
-  }
-  
-  // If it's a 1D array, try to reshape it based on shape info
-  if (Array.isArray(data) && typeof data[0] === 'number') {
-    if (shape && shape.length === 2) {
-      // Reshape to 2D array
-      const [rows, cols] = shape;
-      const result: number[][] = [];
-      for (let i = 0; i < rows; i++) {
-        result.push(data.slice(i * cols, (i + 1) * cols));
-      }
-      return result;
-    } else {
-      // For now, just return as a single row
-      return [data];
-    }
-  }
-  
-  return [];
-};
-
-function splitLayers(visualization: VisualizationData) {
-  const main: [string, LayerData][] = [];
-  const internals: Record<string, [string, LayerData][]> = {};
-
-  if (!visualization) return { main, internals };
-
-  for (const [name, data] of Object.entries(visualization)) {
-    if (!data) continue;
-    
-    if (!name.includes(".")) {
-      main.push([name, data]);
-    } else {
-      const [parent] = name.split(".");
-      if (parent === undefined) continue;
-
-      if (!internals[parent]) internals[parent] = [];
-      internals[parent].push([name, data]);
-    }
-  }
-
-  return { main, internals };
-}
+import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge";
+import { ArrowRight, Music, BarChart3, Sparkles, Zap, TrendingUp, ChevronDown, X, BookOpen, Code, FileText, Play } from "lucide-react";
+import Link from "next/link";
 
 export default function HomePage() {
-  const [vizData, setVizData] = useState<ApiResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [fileName, setFileName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string>("");
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [selectedFeatureMap, setSelectedFeatureMap] = useState<{
-    data: number[][];
-    title: string;
-    layerName?: string;
-  } | null>(null);
-  const [showLayerComparison, setShowLayerComparison] = useState(false);
-
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setFileName(file.name);
-    setIsLoading(true);
-    setError(null);
-    setVizData(null);
-    setCurrentTime(0);
-    setDuration(0);
-    setIsAudioPlaying(false);
-    setSelectedFeatureMap(null);
-    setShowLayerComparison(false);
-
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(file);
-    reader.onload = async () => {
-      // Create audio URL for playback
-      const audioBlob = new Blob([reader.result as ArrayBuffer], { type: file.type });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      setAudioUrl(audioUrl);
-      try {
-        const arrayBuffer = reader.result as ArrayBuffer;
-        const base64String = btoa(
-          new Uint8Array(arrayBuffer).reduce(
-            (data, byte) => data + String.fromCharCode(byte),
-            "",
-          ),
-        );
-
-        const response = await fetch("https://shekharsudhanshu801--audio-cnn-inference-audioclassifier-2e9fb8.modal.run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ audio_data: base64String }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API error ${response.statusText}`);
-        }
-
-        const data: ApiResponse = await response.json();
-        setVizData(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occured",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    reader.onerror = () => {
-      setError("Failed ot read the file.");
-      setIsLoading(false);
-    };
-  };
-
-  const { main, internals } = vizData && vizData.visualization
-    ? splitLayers(vizData.visualization)
-    : { main: [], internals: {} };
-
-  // Handle feature map modal
-  const handleOpenFeatureMapModal = (data: number[][], title: string, layerName?: string) => {
-    setSelectedFeatureMap({ data, title, layerName });
-  };
-
-  // Handle layer comparison
-  const handleOpenLayerComparison = () => {
-    setShowLayerComparison(true);
-  };
-
-  // Prepare layers for comparison
-  const comparisonLayers = main.map(([name, data]) => ({
-    name,
-    data: ensure2DArray(data?.values, data?.shape),
-    title: name,
-  }));
+  const [showGetStarted, setShowGetStarted] = useState(false);
+  const [showDocumentation, setShowDocumentation] = useState(false);
 
   return (
-    <main className="min-h-screen bg-stone-50 p-8">
-      <div className="mx-auto max-w-[100%]">
-        <div className="mb-12 text-center">
-          <h1 className="mb-4 text-4xl font-light tracking-tight text-stone-900">
-            CNN Audio Visualizer
-          </h1>
-          <p className="text-md mb-8 text-stone-600">
-            Upload a WAV file to see the model's predictions and feauture maps
-          </p>
-
-          <div className="flex flex-col items-center">
-            <div className="relative inline-block">
-              <input
-                type="file"
-                accept=".wav"
-                id="file-upload"
-                onChange={handleFileChange}
-                disabled={isLoading}
-                className="absolute inset-0 w-full cursor-pointer opacity-0"
-              />
-              <Button
-                disabled={isLoading}
-                className="border-stone-300"
-                variant="outline"
-                size="lg"
+    <main className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Floating Orbs */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-96 h-96 bg-gradient-to-r from-purple-400/15 to-pink-400/15 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-gradient-to-r from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '4s'}}></div>
+        
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
+        
+        {/* Subtle Noise Texture */}
+        <div className="absolute inset-0 opacity-[0.015] bg-noise" />
+        
+        {/* Floating Decorative Elements */}
+        <div className="absolute top-1/4 right-1/4 w-2 h-2 bg-blue-400/30 rounded-full animate-float"></div>
+        <div className="absolute top-1/3 left-1/3 w-1 h-1 bg-purple-400/40 rounded-full animate-float" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-1/3 right-1/3 w-1.5 h-1.5 bg-pink-400/30 rounded-full animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-2/3 left-1/4 w-1 h-1 bg-cyan-400/35 rounded-full animate-float" style={{animationDelay: '3s'}}></div>
+        
+        {/* Music Notes */}
+        <div className="absolute top-20 left-20 text-blue-400/40 animate-float">
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        <div className="absolute top-32 right-32 text-purple-400/40 animate-float" style={{animationDelay: '1.5s'}}>
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        <div className="absolute bottom-32 left-32 text-pink-400/40 animate-float" style={{animationDelay: '3s'}}>
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        
+        {/* Waveform Bars */}
+        <div className="absolute top-40 left-1/3 flex space-x-1 animate-wave">
+          <div className="w-1 bg-blue-400/30 rounded-full h-4"></div>
+          <div className="w-1 bg-purple-400/30 rounded-full h-6"></div>
+          <div className="w-1 bg-pink-400/30 rounded-full h-3"></div>
+          <div className="w-1 bg-cyan-400/30 rounded-full h-5"></div>
+          <div className="w-1 bg-blue-400/30 rounded-full h-2"></div>
+        </div>
+        
+        <div className="absolute bottom-40 right-1/3 flex space-x-1 animate-wave" style={{animationDelay: '2s'}}>
+          <div className="w-1 bg-purple-400/30 rounded-full h-3"></div>
+          <div className="w-1 bg-pink-400/30 rounded-full h-5"></div>
+          <div className="w-1 bg-cyan-400/30 rounded-full h-4"></div>
+          <div className="w-1 bg-blue-400/30 rounded-full h-6"></div>
+          <div className="w-1 bg-purple-400/30 rounded-full h-2"></div>
+        </div>
+      </div>
+      
+      {/* Hero Section */}
+      <div className="relative">
+        
+        <div className="relative px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-8 flex justify-center">
+              <div className="relative group">
+                <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 opacity-75 blur group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative rounded-lg bg-white px-4 py-2 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                  <Badge variant="secondary" className="text-sm font-medium">
+                    <Sparkles className="mr-1 h-3 w-3 animate-pulse" />
+                    Audio ML Platform
+                  </Badge>
+                </div>
+                {/* Floating music notes around badge */}
+                <div className="absolute -top-2 -left-2 text-blue-400/60 animate-bounce-music">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                  </svg>
+                </div>
+                <div className="absolute -bottom-2 -right-2 text-purple-400/60 animate-bounce-music" style={{animationDelay: '1s'}}>
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
+            <h1 className="text-4xl font-bold tracking-tight text-stone-900 sm:text-6xl">
+              <span className="inline-block animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                EchoCNN
+              </span>
+              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+                Visualizer
+              </span>
+            </h1>
+            
+            <p className="mt-6 text-lg leading-8 text-stone-600 animate-fade-in-up" style={{animationDelay: '0.6s'}}>
+              Transform your audio CNN research with professional-grade visualization tools. 
+              Explore feature maps, analyze training metrics, and understand your model's behavior.
+            </p>
+            
+                                      <div className="mt-10 flex items-center justify-center gap-x-6 animate-fade-in-up" style={{animationDelay: '0.8s'}}>
+              <Button 
+                size="lg" 
+                className="group relative overflow-hidden"
+                onClick={() => {
+                  setShowGetStarted(!showGetStarted);
+                  // Smooth scroll to the features section
+                  if (!showGetStarted) {
+                    document.getElementById('features-section')?.scrollIntoView({ 
+                      behavior: 'smooth' 
+                    });
+                  }
+                }}
               >
-                {isLoading ? "Analysing..." : "Choose File"}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <span className="relative z-10">Get Started</span>
+                <ChevronDown className={`ml-2 h-4 w-4 transition-transform duration-300 ${showGetStarted ? 'rotate-180' : ''}`} />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="group relative overflow-hidden"
+                onClick={() => setShowDocumentation(true)}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-stone-100 to-stone-200 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <span className="relative z-10">View Documentation</span>
               </Button>
             </div>
-
-            {fileName && (
-              <Badge
-                variant="secondary"
-                className="mt-4 bg-stone-200 text-stone-700"
-              >
-                {fileName}
-              </Badge>
-            )}
           </div>
         </div>
+      </div>
 
-        {error && (
-          <Card className="mb-8 border-red-200 bg-red-50">
-            <CardContent>
-              <p className="text-red-600">Error: {error}</p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Features Section */}
+      <div id="features-section" className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+            Choose Your Analysis
+          </h2>
+          <p className="mt-4 text-lg text-stone-600 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+            Select the type of analysis you want to perform
+          </p>
+        </div>
 
-        {vizData && (
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-stone-900">
-                  Top Predictions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {(vizData.predictions || []).slice(0, 3).map((pred, i) => (
-                    <div key={pred.class} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="text-md font-medium text-stone-700">
-                          {getEmojiForClass(pred.class)}{" "}
-                          <span>{pred.class.replaceAll("_", " ")}</span>
-                        </div>
-                        <Badge variant={i === 0 ? "default" : "secondary"}>
-                          {(pred.confidence * 100).toFixed(1)}%
-                        </Badge>
-                      </div>
-                      <Progress value={pred.confidence * 100} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Audio Player */}
-            {audioUrl && (
-              <AudioPlayer
-                audioUrl={audioUrl}
-                fileName={fileName}
-                onTimeUpdate={(time, dur) => {
-                  setCurrentTime(time);
-                  setDuration(dur);
-                }}
-                onSeek={(time) => setCurrentTime(time)}
-                onPlayStateChange={(isPlaying) => setIsAudioPlaying(isPlaying)}
-                className="mb-6"
-              />
-            )}
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader className="text-stone-900">
-                  <CardTitle className="text-stone-900">
-                    Input Spectrogram
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {(() => {
-                    const inputSpectrogram = findInputSpectrogram(vizData);
-                    
-                    if (!inputSpectrogram?.values || inputSpectrogram.values.length === 0) {
-                      // Try to use the first layer from visualization as fallback
-                      const firstLayer = vizData.visualization ? Object.values(vizData.visualization)[0] : null;
-                      
-                      if (firstLayer?.values && firstLayer.values.length > 0) {
-                        return (
-                          <FeatureMap
-                            data={ensure2DArray(firstLayer.values, firstLayer?.shape)}
-                            title={`Input (${firstLayer?.shape?.join(" x ") || "Unknown"})`}
-                            spectrogram
-                            layerName="input_spectrogram"
-                            onOpenModal={handleOpenFeatureMapModal}
-                          />
-                        );
-                      }
-                      
-                      return (
-                        <div className="flex h-32 items-center justify-center text-stone-500">
-                          <p>No spectrogram data available</p>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <FeatureMap
-                        data={ensure2DArray(inputSpectrogram.values, inputSpectrogram?.shape)}
-                        title={`${inputSpectrogram?.shape?.join(" x ") || "Unknown"}`}
-                        spectrogram
-                        layerName="input_spectrogram"
-                        onOpenModal={handleOpenFeatureMapModal}
-                      />
-                    );
-                  })()}
-
-                  <div className="mt-5 flex justify-end">
-                    <div className="text-right">
-                      <ColorScale width={200} height={16} min={-1} max={1} />
-                      <p className="text-xs text-stone-500 mt-1">
-                        Color scale: Darker = lower values, Brighter = higher values
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-stone-900">
-                    Audio Waveform
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Waveform
-                    data={vizData.waveform?.values || []}
-                    title={`${vizData.waveform?.duration?.toFixed(2) || "0.00"}s * ${vizData.waveform?.sample_rate || 0}Hz`}
-                    currentTime={currentTime}
-                    duration={duration}
-                    onSeek={(time) => setCurrentTime(time)}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Feature maps */}
-            <Card>
-              <CardHeader>
+        <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Audio Analysis Card */}
+          <Link href="/audio-analysis" className="group">
+            <Card className="relative h-full cursor-pointer overflow-hidden border-0 bg-white/60 backdrop-blur-md transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/30 group-hover:scale-[1.02] group-hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-purple-50/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="relative">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Convolutional Layer Outputs</CardTitle>
-                    <p className="text-sm text-stone-600 mt-1">
-                      Each feature map shows what patterns this layer learned to detect in the audio
-                    </p>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+                    <Music className="h-6 w-6" />
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-stone-400 transition-transform group-hover:translate-x-1" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-stone-900">
+                  Audio Analysis
+                </CardTitle>
+                <p className="text-stone-600">
+                  Upload audio files and explore CNN feature maps in real-time
+                </p>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-sm text-stone-700">Interactive feature map visualization</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleOpenLayerComparison}
-                      disabled={main.length === 0}
-                    >
-                      <GitCompare className="h-4 w-4 mr-2" />
-                      Compare Layers
-                    </Button>
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-sm text-stone-700">Real-time audio playback with synchronization</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-sm text-stone-700">Zoom, pan, and export high-resolution maps</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-sm text-stone-700">Model predictions with confidence scores</span>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-5 gap-6">
-                  {main.map(([mainName, mainData]) => (
-                    <div key={mainName} className="space-y-4">
-                      <div>
-                        <h4 className="mb-2 font-medium text-stone-700">
-                          {mainName}
-                        </h4>
-                        <FeatureMap
-                          data={ensure2DArray(mainData?.values, mainData?.shape)}
-                          title={`${mainData?.shape?.join(" x ") || "Unknown"}`}
-                          layerName={mainName}
-                          onOpenModal={handleOpenFeatureMapModal}
-                        />
-                      </div>
-
-                      {internals[mainName] && (
-                        <div className="h-80 overflow-y-auto rounded border border-stone-200 bg-stone-50 p-2">
-                          <div className="space-y-2">
-                            {internals[mainName]
-                              .sort(([a], [b]) => a.localeCompare(b))
-                              .map(([layerName, layerData]) => (
-                                <FeatureMap
-                                  key={layerName}
-                                  data={ensure2DArray(layerData?.values, layerData?.shape)}
-                                  title={layerName.replace(`${mainName}.`, "")}
-                                  internal={true}
-                                  layerName={layerName}
-                                  onOpenModal={handleOpenFeatureMapModal}
-                                />
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-5 flex justify-end">
-                  <ColorScale width={200} height={16} min={-1} max={1} />
-                  <p className="text-xs text-stone-500 mt-1">
-                    Color scale: Darker = lower values, Brighter = higher values
-                  </p>
+                
+                <div className="mt-6 flex items-center justify-between">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    <Zap className="mr-1 h-3 w-3" />
+                    Real-time
+                  </Badge>
+                  <span className="text-sm text-stone-500">Upload WAV files</span>
                 </div>
               </CardContent>
             </Card>
+          </Link>
+
+          {/* Training Analysis Card */}
+          <Link href="/training-analysis" className="group">
+            <Card className="relative h-full cursor-pointer overflow-hidden border-0 bg-white/60 backdrop-blur-md transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/30 group-hover:scale-[1.02] group-hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 to-pink-50/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-stone-400 transition-transform group-hover:translate-x-1" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-stone-900">
+                  Training Analysis
+                </CardTitle>
+                <p className="text-stone-600">
+                  Monitor training progress and analyze model performance metrics
+                </p>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                    <span className="text-sm text-stone-700">Live TensorBoard integration</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                    <span className="text-sm text-stone-700">Interactive training curves and metrics</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                    <span className="text-sm text-stone-700">Overfitting analysis and convergence tracking</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                    <span className="text-sm text-stone-700">Multi-run comparison and data export</span>
+                  </div>
+                </div>
+                
+                <div className="mt-6 flex items-center justify-between">
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                    <TrendingUp className="mr-1 h-3 w-3" />
+                    Analytics
+                  </Badge>
+                  <span className="text-sm text-stone-500">View training logs</span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Stats Section */}
+        <div className="mt-24 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="text-center group cursor-pointer p-6 rounded-lg hover:bg-white/50 transition-all duration-300 hover:scale-105 relative">
+            <div className="absolute top-2 right-2 text-blue-400/40 group-hover:text-blue-500 transition-colors duration-300">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-stone-900 group-hover:text-blue-600 transition-colors duration-300">50+</div>
+            <div className="text-sm text-stone-600 group-hover:text-stone-700 transition-colors duration-300">Audio Classes</div>
+            <div className="mt-2 w-8 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
-        )}
-
-        {/* Feature Map Modal */}
-        {selectedFeatureMap && (
-          <FeatureMapModal
-            isOpen={!!selectedFeatureMap}
-            onClose={() => setSelectedFeatureMap(null)}
-            data={selectedFeatureMap.data}
-            title={selectedFeatureMap.title}
-            layerName={selectedFeatureMap.layerName}
-          />
-        )}
-
-        {/* Layer Comparison Modal */}
-        {showLayerComparison && (
-          <LayerComparison
-            isOpen={showLayerComparison}
-            onClose={() => setShowLayerComparison(false)}
-            layers={comparisonLayers}
-          />
-        )}
+          <div className="text-center group cursor-pointer p-6 rounded-lg hover:bg-white/50 transition-all duration-300 hover:scale-105 relative">
+            <div className="absolute top-2 right-2 text-purple-400/40 group-hover:text-purple-500 transition-colors duration-300">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-stone-900 group-hover:text-purple-600 transition-colors duration-300">10x</div>
+            <div className="text-sm text-stone-600 group-hover:text-stone-700 transition-colors duration-300">Zoom Capability</div>
+            <div className="mt-2 w-8 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+          <div className="text-center group cursor-pointer p-6 rounded-lg hover:bg-white/50 transition-all duration-300 hover:scale-105 relative">
+            <div className="absolute top-2 right-2 text-green-400/40 group-hover:text-green-500 transition-colors duration-300">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-stone-900 group-hover:text-green-600 transition-colors duration-300">Real-time</div>
+            <div className="text-sm text-stone-600 group-hover:text-stone-700 transition-colors duration-300">Audio Processing</div>
+            <div className="mt-2 w-8 h-1 bg-gradient-to-r from-green-500 to-blue-500 mx-auto rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+          <div className="text-center group cursor-pointer p-6 rounded-lg hover:bg-white/50 transition-all duration-300 hover:scale-105 relative">
+            <div className="absolute top-2 right-2 text-orange-400/40 group-hover:text-orange-500 transition-colors duration-300">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-stone-900 group-hover:text-orange-600 transition-colors duration-300">100%</div>
+            <div className="text-sm text-stone-600 group-hover:text-stone-700 transition-colors duration-300">Open Source</div>
+            <div className="mt-2 w-8 h-1 bg-gradient-to-r from-orange-500 to-red-500 mx-auto rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+        </div>
       </div>
+
+      {/* Documentation Modal */}
+      {showDocumentation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-stone-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-stone-900">Documentation</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDocumentation(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-8">
+              {/* Quick Start */}
+              <div>
+                <h3 className="text-xl font-semibold text-stone-900 mb-4 flex items-center">
+                  <Play className="mr-2 h-5 w-5 text-blue-500" />
+                  Quick Start
+                </h3>
+                <div className="space-y-4 text-stone-600">
+                  <p>Get started with EchoCNN Visualizer in just a few steps:</p>
+                  <ol className="list-decimal list-inside space-y-2 ml-4">
+                    <li>Upload a WAV audio file (16kHz recommended)</li>
+                    <li>Wait for the model to process and generate predictions</li>
+                    <li>Explore the interactive feature maps and visualizations</li>
+                    <li>Use the audio player to sync with the visualizations</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div>
+                <h3 className="text-xl font-semibold text-stone-900 mb-4 flex items-center">
+                  <Sparkles className="mr-2 h-5 w-5 text-purple-500" />
+                  Features
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border border-stone-200 rounded-lg">
+                    <h4 className="font-medium text-stone-900 mb-2">Audio Analysis</h4>
+                    <ul className="text-sm text-stone-600 space-y-1">
+                      <li>• Real-time audio processing</li>
+                      <li>• Interactive feature map visualization</li>
+                      <li>• Model predictions with confidence scores</li>
+                      <li>• Audio playback synchronization</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 border border-stone-200 rounded-lg">
+                    <h4 className="font-medium text-stone-900 mb-2">Training Analysis</h4>
+                    <ul className="text-sm text-stone-600 space-y-1">
+                      <li>• TensorBoard integration</li>
+                      <li>• Training metrics visualization</li>
+                      <li>• Multi-run comparison</li>
+                      <li>• Export capabilities</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Technical Details */}
+              <div>
+                <h3 className="text-xl font-semibold text-stone-900 mb-4 flex items-center">
+                  <Code className="mr-2 h-5 w-5 text-green-500" />
+                  Technical Details
+                </h3>
+                <div className="space-y-4 text-stone-600">
+                  <div>
+                    <h4 className="font-medium text-stone-900 mb-2">Supported Audio Formats</h4>
+                    <p className="text-sm">WAV files with 16kHz sample rate recommended for optimal performance.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-stone-900 mb-2">Model Architecture</h4>
+                    <p className="text-sm">Based on CNN architecture trained on ESC-50 dataset with 50 audio classes.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-stone-900 mb-2">Visualization Features</h4>
+                    <p className="text-sm">Feature maps are normalized and displayed with interactive zoom, pan, and export capabilities.</p>
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="mt-32 border-t border-stone-200 bg-white/50 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
+          <div className="text-center">
+            <p className="text-sm text-stone-500">
+              Built with ❤️ for the Audio ML Community
+            </p>
+            <p className="mt-2 text-xs text-stone-400">
+              Next.js • TypeScript • PyTorch • TensorFlow
+            </p>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
