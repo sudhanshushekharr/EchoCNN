@@ -23,11 +23,6 @@ const config = {
       },
     ];
   },
-  
-  // Ensure static files are included in build
-  experimental: {
-    outputFileTracingRoot: undefined,
-  },
 };
 
 export default config;
