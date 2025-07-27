@@ -1,0 +1,19 @@
+{
+  "total_runs": 4,
+  "available_metrics": [
+    "Loss/Train",
+    "Learning_Rate",
+    "Loss/Validation",
+    "Accuracy/Validation"
+  ],
+  "runs": [
+    "run_20250721_120620",
+    "run_20250720_213349",
+    "run_20250720_214042",
+    "run_20250720_213556"
+  ],
+  "date_range": {
+    "earliest": 1753047288.7035582,
+    "latest": 1753103371.5449028
+  }
+}

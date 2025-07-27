@@ -1,0 +1,54 @@
+{
+  "metrics": {
+    "Loss/Train": {
+      "steps": [
+        0
+      ],
+      "values": [
+        3.8278868198394775
+      ],
+      "wall_times": [
+        1753047288.7035582
+      ]
+    },
+    "Learning_Rate": {
+      "steps": [
+        0
+      ],
+      "values": [
+        0.00012717269419226795
+      ],
+      "wall_times": [
+        1753047288.7037709
+      ]
+    },
+    "Loss/Validation": {
+      "steps": [
+        0
+      ],
+      "values": [
+        3.404930591583252
+      ],
+      "wall_times": [
+        1753047296.8489535
+      ]
+    },
+    "Accuracy/Validation": {
+      "steps": [
+        0
+      ],
+      "values": [
+        14.75
+      ],
+      "wall_times": [
+        1753047296.8490329
+      ]
+    }
+  },
+  "metadata": {
+    "file_path": "tensorboard_logs/run_20250720_213349/events.out.tfevents.1753047229.modal.2.0",
+    "total_steps": 0,
+    "start_time": 1753047288.7035582,
+    "end_time": 1753047296.8490329
+  }
+}
