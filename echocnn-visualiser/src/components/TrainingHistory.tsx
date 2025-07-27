@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -45,7 +45,7 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
   const [selectedMetric, setSelectedMetric] = useState<'loss' | 'accuracy' | 'learning_rate'>('loss');
   const [showOverfitting, setShowOverfitting] = useState(true);
 
-  const formatNumber = (num: number, decimals: number = 2) => {
+  const formatNumber = (num: number, decimals = 2) => {
     return num.toFixed(decimals);
   };
 
@@ -110,9 +110,12 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
             
             {/* Training loss line */}
             <polyline
-              points={trainingData.steps.map((step, i) => 
-                `${(step / trainingData.steps[trainingData.steps.length - 1]) * 400},${200 - ((trainingData.train_loss[i] - minLoss) / range) * 180}`
-              ).join(' ')}
+              points={trainingData.steps.map((step, i) => {
+                const lastStep = trainingData.steps[trainingData.steps.length - 1] ?? 1;
+                const loss = trainingData.train_loss[i];
+                if (typeof step !== 'number' || typeof loss !== 'number' || typeof minLoss !== 'number' || typeof range !== 'number') return '';
+                return `${(step / lastStep) * 400},${200 - ((loss - minLoss) / range) * 180}`;
+              }).join(' ')}
               fill="none"
               stroke="#3b82f6"
               strokeWidth="2"
@@ -120,9 +123,12 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
             
             {/* Validation loss line */}
             <polyline
-              points={trainingData.steps.map((step, i) => 
-                `${(step / trainingData.steps[trainingData.steps.length - 1]) * 400},${200 - ((trainingData.val_loss[i] - minLoss) / range) * 180}`
-              ).join(' ')}
+              points={trainingData.steps.map((step, i) => {
+                const lastStep = trainingData.steps[trainingData.steps.length - 1] ?? 1;
+                const valLoss = trainingData.val_loss[i];
+                if (typeof step !== 'number' || typeof valLoss !== 'number' || typeof minLoss !== 'number' || typeof range !== 'number') return '';
+                return `${(step / lastStep) * 400},${200 - ((valLoss - minLoss) / range) * 180}`;
+              }).join(' ')}
               fill="none"
               stroke="#ef4444"
               strokeWidth="2"
@@ -160,23 +166,28 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
             
             {/* Accuracy line */}
             <polyline
-              points={trainingData.steps.map((step, i) => 
-                `${(step / trainingData.steps[trainingData.steps.length - 1]) * 400},${200 - (trainingData.val_accuracy[i] / 100) * 180}`
-              ).join(' ')}
+              points={trainingData.steps.map((step, i) => {
+                const lastStep = trainingData.steps[trainingData.steps.length - 1] ?? 1;
+                const acc = trainingData.val_accuracy[i];
+                if (typeof step !== 'number' || typeof acc !== 'number') return '';
+                return `${(step / lastStep) * 400},${200 - (acc / 100) * 180}`;
+              }).join(' ')}
               fill="none"
               stroke="#10b981"
               strokeWidth="2"
             />
             
             {/* Best accuracy marker */}
-            <circle
-              cx={(analysis.best_val_accuracy_step / trainingData.steps[trainingData.steps.length - 1]) * 400}
-              cy={200 - (analysis.best_val_accuracy / 100) * 180}
-              r="4"
-              fill="#f59e0b"
-              stroke="white"
-              strokeWidth="2"
-            />
+            {typeof analysis.best_val_accuracy_step === 'number' && trainingData.steps.length > 0 && (
+              <circle
+                cx={(analysis.best_val_accuracy_step / (trainingData.steps[trainingData.steps.length - 1] ?? 1)) * 400}
+                cy={200 - (analysis.best_val_accuracy / 100) * 180}
+                r="4"
+                fill="#f59e0b"
+                stroke="white"
+                strokeWidth="2"
+              />
+            )}
           </svg>
         </div>
       </div>
@@ -214,9 +225,12 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
             
             {/* Learning rate line */}
             <polyline
-              points={trainingData.steps.map((step, i) => 
-                `${(step / trainingData.steps[trainingData.steps.length - 1]) * 400},${200 - ((trainingData.learning_rate[i] - minLR) / range) * 180}`
-              ).join(' ')}
+              points={trainingData.steps.map((step, i) => {
+                const lastStep = trainingData.steps[trainingData.steps.length - 1] ?? 1;
+                const lr = trainingData.learning_rate[i];
+                if (typeof step !== 'number' || typeof lr !== 'number' || typeof minLR !== 'number' || typeof range !== 'number') return '';
+                return `${(step / lastStep) * 400},${200 - ((lr - minLR) / range) * 180}`;
+              }).join(' ')}
               fill="none"
               stroke="#8b5cf6"
               strokeWidth="2"
@@ -240,7 +254,7 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
                   {formatNumber(analysis.final_val_accuracy)}%
                 </p>
               </div>
-              {getTrendIcon(analysis.final_val_accuracy, trainingData.val_accuracy[trainingData.val_accuracy.length - 2] || 0)}
+              {getTrendIcon(analysis.final_val_accuracy, trainingData.val_accuracy[trainingData.val_accuracy.length - 2] ?? 0)}
             </div>
           </CardContent>
         </Card>
@@ -281,7 +295,7 @@ const TrainingHistory = ({ trainingData, analysis, className = "" }: TrainingHis
                   {formatNumber(analysis.final_val_loss)}
                 </p>
               </div>
-              {getTrendIcon(analysis.final_val_loss, trainingData.val_loss[trainingData.val_loss.length - 2] || 0)}
+              {getTrendIcon(analysis.final_val_loss, trainingData.val_loss[trainingData.val_loss.length - 2] ?? 0)}
             </div>
           </CardContent>
         </Card>

@@ -7,23 +7,20 @@ import { Badge } from "~/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { TrendingUp, TrendingDown, Target, Download, BarChart3 } from "lucide-react";
 
+// 1. Use Record for runs and metrics
 interface TensorBoardData {
-  runs: {
-    [runName: string]: {
-      metrics: {
-        [metricName: string]: {
-          steps: number[];
-          values: number[];
-          wall_times: number[];
-        };
-      };
-      metadata: {
-        total_steps: number;
-        start_time: number;
-        end_time: number;
-      };
+  runs: Record<string, {
+    metrics: Record<string, {
+      steps: number[];
+      values: number[];
+      wall_times: number[];
+    }>;
+    metadata: {
+      total_steps: number;
+      start_time: number;
+      end_time: number;
     };
-  };
+  }>;
   summary: {
     total_runs: number;
     available_metrics: string[];
@@ -47,22 +44,20 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
   const [error, setError] = useState<string | null>(null);
 
   // Load TensorBoard data
+  // 2. Add type annotation to data loading
+  // 3. Use void for promise in useEffect
   useEffect(() => {
-    const loadTensorBoardData = async () => {
+    void (async () => {
       try {
         setIsLoading(true);
-        
         const response = await fetch('/tensorboard_data/all_tensorboard_data.json');
-        
         if (response.ok) {
-          const data = await response.json();
-          
+          const data = await response.json() as TensorBoardData;
           setTensorboardData(data);
-          
           // Set default selections with null checks
-          if (data?.summary?.runs && data.summary.runs.length > 0) {
+          if (data?.summary?.runs && data.summary.runs.length > 0 && data.summary.runs[0]) {
             setSelectedRun(data.summary.runs[0]);
-            if (data.summary.available_metrics && data.summary.available_metrics.length > 0) {
+            if (data.summary.available_metrics && data.summary.available_metrics.length > 0 && data.summary.available_metrics[0]) {
               setSelectedMetric(data.summary.available_metrics[0]);
             }
           }
@@ -75,12 +70,11 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
       } finally {
         setIsLoading(false);
       }
-    };
-
-    loadTensorBoardData();
+    })();
   }, []);
 
-  const formatNumber = (num: number, decimals: number = 2) => {
+  // 4. Add checks for possibly undefined objects/arrays
+  const formatNumber = (num: number, decimals = 2) => {
     if (!isFinite(num) || isNaN(num)) {
       return 'N/A';
     }
@@ -91,19 +85,19 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
     return new Date(timestamp * 1000).toLocaleString();
   };
 
+  // 5. Use ?? instead of || for fallbacks everywhere
   const getTrendIcon = (values: number[]) => {
-    if (values.length < 2) return <Target className="h-4 w-4 text-blue-500" />;
-    
+    if (!values?.length || values.length < 2) return <Target className="h-4 w-4 text-blue-500" />;
     const recent = values.slice(-5);
-    const trend = recent[recent.length - 1] - recent[0];
-    
+    if (!recent.length) return <Target className="h-4 w-4 text-blue-500" />;
+    const trend = (recent[recent.length - 1] ?? 0) - (recent[0] ?? 0);
     if (trend > 0) return <TrendingUp className="h-4 w-4 text-red-500" />;
     if (trend < 0) return <TrendingDown className="h-4 w-4 text-green-500" />;
     return <Target className="h-4 w-4 text-blue-500" />;
   };
 
   const renderChart = (metricData: { steps: number[]; values: number[] }) => {
-    if (!metricData || metricData.steps.length === 0) return null;
+    if (!metricData?.steps || !metricData?.values || metricData.steps.length === 0 || metricData.values.length === 0) return null;
 
     const { steps, values } = metricData;
     const maxValue = Math.max(...values);
@@ -139,6 +133,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
           {/* Chart line */}
           <polyline
             points={steps.map((step, i) => {
+              if (typeof step !== 'number' || typeof values[i] !== 'number') return '0,0';
               const x = (step / maxStep) * 400;
               const y = 200 - ((values[i] - minValue) / range) * 180;
               // Ensure values are finite and within bounds
@@ -151,6 +146,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
           
           {/* Data points */}
           {steps.map((step, i) => {
+            if (typeof step !== 'number' || typeof values[i] !== 'number') return null;
             const x = (step / maxStep) * 400;
             const y = 200 - ((values[i] - minValue) / range) * 180;
             
@@ -173,19 +169,18 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
     );
   };
 
+  // 6. Remove unnecessary type annotations
   const exportMetricData = () => {
     if (!tensorboardData || !selectedRun || !selectedMetric) return;
-
     const runData = tensorboardData.runs[selectedRun];
-    const metricData = runData.metrics[selectedMetric];
-    
+    const metricData = runData?.metrics[selectedMetric];
+    if (!runData || !metricData) return;
     const csvContent = [
       'Step,Value,Wall Time',
-      ...metricData.steps.map((step, i) => 
-        `${step},${metricData.values[i]},${formatDate(metricData.wall_times[i])}`
+      ...metricData.steps.map((step, i) =>
+        `${step},${metricData.values[i] ?? ''},${formatDate(metricData.wall_times[i] ?? 0)}`
       )
     ].join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -215,7 +210,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
       <Card className={className}>
         <CardContent className="p-8">
           <div className="text-center text-red-600">
-            <p>Error: {error || 'Failed to load TensorBoard data'}</p>
+            <p>Error: {error ?? 'Failed to load TensorBoard data'}</p>
             <p className="text-sm text-stone-500 mt-2">
               Make sure to run the conversion script first
             </p>
@@ -239,6 +234,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
     );
   }
 
+  // 7. Ensure all array accesses are safe
   const selectedRunData = tensorboardData.runs?.[selectedRun];
   const selectedMetricData = selectedRunData?.metrics?.[selectedMetric];
 
@@ -252,7 +248,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
               <div>
                 <p className="text-sm text-stone-600">Total Runs</p>
                 <p className="text-2xl font-bold text-stone-900">
-                  {tensorboardData.summary?.total_runs || 0}
+                  {tensorboardData.summary?.total_runs ?? 0}
                 </p>
               </div>
               <BarChart3 className="h-4 w-4 text-stone-500" />
@@ -266,7 +262,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
               <div>
                 <p className="text-sm text-stone-600">Available Metrics</p>
                 <p className="text-2xl font-bold text-stone-900">
-                  {tensorboardData.summary?.available_metrics?.length || 0}
+                  {tensorboardData.summary?.available_metrics?.length ?? 0}
                 </p>
               </div>
               <TrendingUp className="h-4 w-4 text-stone-500" />
@@ -319,18 +315,18 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm font-medium text-yellow-800 mb-2">Debug Info:</p>
               <p className="text-xs text-yellow-700">
-                Runs: {tensorboardData?.summary?.runs?.length || 0} 
-                ({tensorboardData?.summary?.runs?.join(', ') || 'none'})
+                Runs: {tensorboardData?.summary?.runs?.length ?? 0} 
+                ({tensorboardData?.summary?.runs?.join(', ') ?? 'none'})
               </p>
               <p className="text-xs text-yellow-700">
-                Metrics: {tensorboardData?.summary?.available_metrics?.length || 0}
-                ({tensorboardData?.summary?.available_metrics?.join(', ') || 'none'})
+                Metrics: {tensorboardData?.summary?.available_metrics?.length ?? 0}
+                ({tensorboardData?.summary?.available_metrics?.join(', ') ?? 'none'})
               </p>
               <p className="text-xs text-yellow-700">
-                Selected Run: {selectedRun || 'none'}
+                Selected Run: {selectedRun ?? 'none'}
               </p>
               <p className="text-xs text-yellow-700">
-                Selected Metric: {selectedMetric || 'none'}
+                Selected Metric: {selectedMetric ?? 'none'}
               </p>
             </div>
           )}
@@ -347,7 +343,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
                     <SelectItem key={run} value={run}>
                       {run}
                     </SelectItem>
-                  )) || []}
+                  )) ?? []}
                 </SelectContent>
               </Select>
             </div>
@@ -363,7 +359,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
                     <SelectItem key={metric} value={metric}>
                       {metric}
                     </SelectItem>
-                  )) || []}
+                  )) ?? []}
                 </SelectContent>
               </Select>
             </div>
@@ -439,12 +435,12 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
                     <div className="flex items-center space-x-2">
                       {getTrendIcon(selectedMetricData.values)}
                       <Badge variant="secondary">
-                        {selectedMetricData.values.length} data points
+                        {selectedMetricData.values?.length ?? 0} data points
                       </Badge>
                     </div>
                   </div>
                   
-                  {selectedMetricData.steps.length > 0 && selectedMetricData.values.length > 0 ? (
+                  {selectedMetricData.steps?.length > 0 && selectedMetricData.values?.length > 0 ? (
                     renderChart(selectedMetricData)
                   ) : (
                     <div className="relative h-64 bg-stone-50 rounded-lg p-4 flex items-center justify-center">
@@ -476,7 +472,7 @@ const StaticTensorBoardViewer = ({ className = "" }: StaticTensorBoardViewerProp
                       <p className="font-semibold">{formatNumber(
                         selectedMetricData.values
                           .filter(v => isFinite(v))
-                          .slice(-1)[0] || 0
+                          .slice(-1)[0] ?? 0
                       )}</p>
                     </div>
                   </div>
