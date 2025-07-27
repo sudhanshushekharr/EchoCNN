@@ -25,7 +25,7 @@ const FeatureMap = ({
   const [showStats, setShowStats] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
 
-  if (!data?.length || !data[0]?.length) {
+  if (!data || !data.length || !data[0]?.length) {
     return null;
   }
 

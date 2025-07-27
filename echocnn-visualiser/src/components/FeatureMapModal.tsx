@@ -24,7 +24,7 @@ const FeatureMapModal = ({ isOpen, onClose, data, title, layerName }: FeatureMap
   const containerRef = useRef<HTMLDivElement>(null);
 
   const mapHeight = data.length;
-  const mapWidth = data[0]?.length ?? 0;
+  const mapWidth = data[0]?.length || 0;
 
   // Calculate statistics
   const flatData = data.flat();
@@ -105,7 +105,7 @@ const FeatureMapModal = ({ isOpen, onClose, data, title, layerName }: FeatureMap
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       const link = document.createElement('a');
-      link.download = `${layerName ?? 'feature-map'}.png`;
+      link.download = `${layerName || 'feature-map'}.png`;
       link.href = canvas.toDataURL();
       link.click();
     }
@@ -158,11 +158,6 @@ const FeatureMapModal = ({ isOpen, onClose, data, title, layerName }: FeatureMap
       y: (containerHeight - canvasHeight) / 2,
     });
   }, [data, mapWidth, mapHeight, absMax]);
-
-  // Precompute for tooltip positioning
-  const containerWidth = containerRef.current?.clientWidth ?? 1;
-  const containerHeight = containerRef.current?.clientHeight ?? 1;
-  const scale = Math.max(1, Math.min(containerWidth / mapWidth, containerHeight / mapHeight, 10));
 
   if (!isOpen) return null;
 
@@ -301,8 +296,8 @@ const FeatureMapModal = ({ isOpen, onClose, data, title, layerName }: FeatureMap
             <div
               className="absolute pointer-events-none z-10 rounded bg-black/80 px-2 py-1 text-xs text-white"
               style={{
-                left: hoveredPixel.x * scale * zoom + position.x,
-                top: hoveredPixel.y * scale * zoom + position.y - 30,
+                left: hoveredPixel.x * Math.max(1, Math.min(containerRef.current?.clientWidth / mapWidth || 1, containerRef.current?.clientHeight / mapHeight || 1, 10)) * zoom + position.x,
+                top: hoveredPixel.y * Math.max(1, Math.min(containerRef.current?.clientWidth / mapWidth || 1, containerRef.current?.clientHeight / mapHeight || 1, 10)) * zoom + position.y - 30,
               }}
             >
               <div>Position: ({hoveredPixel.x}, {hoveredPixel.y})</div>

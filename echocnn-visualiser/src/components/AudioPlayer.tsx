@@ -58,7 +58,7 @@ const AudioPlayer = ({
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-       void audioRef.current.play();
+        audioRef.current.play();
       }
     }
   };
@@ -66,7 +66,7 @@ const AudioPlayer = ({
   // Handle seek
   const handleSeek = (value: number[]) => {
     const newTime = value[0];
-    if (audioRef.current && newTime !== undefined) {
+    if (audioRef.current) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
       onSeek?.(newTime);
@@ -76,11 +76,9 @@ const AudioPlayer = ({
   // Handle volume change
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
-    if (newVolume !== undefined) {
-      setVolume(newVolume);
-      if (audioRef.current) {
-        audioRef.current.volume = newVolume;
-      }
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
     }
   };
 
@@ -125,7 +123,7 @@ const AudioPlayer = ({
       // Try to extract audio info
       setAudioInfo({
         format: fileName.split('.').pop()?.toUpperCase(),
-        // sampleRate: audio.sampleRate || undefined, // Remove this line
+        sampleRate: audio.sampleRate || undefined,
       });
     };
 
@@ -160,7 +158,7 @@ const AudioPlayer = ({
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [onTimeUpdate, fileName, onPlayStateChange]);
+  }, [onTimeUpdate, fileName]);
 
   // Use setInterval for more frequent updates when playing
   useEffect(() => {
@@ -186,7 +184,7 @@ const AudioPlayer = ({
         <CardTitle className="flex items-center justify-between text-lg">
           <span>Audio Player</span>
           <Badge variant="secondary" className="text-xs">
-            {audioInfo.format ?? 'WAV'}
+            {audioInfo.format || 'WAV'}
           </Badge>
         </CardTitle>
       </CardHeader>

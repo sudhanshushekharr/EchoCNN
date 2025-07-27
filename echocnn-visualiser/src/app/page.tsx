@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import AudioPlayer from "~/components/AudioPlayer";
 import ColorScale from "~/components/ColorScale";
@@ -11,7 +12,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Progress } from "~/components/ui/progress";
 import Waveform from "~/components/Waveform";
-import { GitCompare } from "lucide-react";
+import { GitCompare, Download } from "lucide-react";
 
 interface Prediction {
   class: string;
@@ -23,7 +24,9 @@ interface LayerData {
   values: number[][];
 }
 
-type VisualizationData = Record<string, LayerData>;
+interface VisualizationData {
+  [layerName: string]: LayerData;
+}
 
 interface WaveformData {
   values: number[];
@@ -92,7 +95,7 @@ const ESC50_EMOJI_MAP: Record<string, string> = {
 };
 
 const getEmojiForClass = (className: string): string => {
-  return ESC50_EMOJI_MAP[className] ?? "🔈";
+  return ESC50_EMOJI_MAP[className] || "🔈";
 };
 
 const findInputSpectrogram = (data: ApiResponse): LayerData | null => {
@@ -110,42 +113,55 @@ const findInputSpectrogram = (data: ApiResponse): LayerData | null => {
     );
     
     if (inputKeys.length > 0) {
-      return data.visualization[inputKeys[0]!] ?? null;
+      return data.visualization[inputKeys[0]] || null;
     }
     
     // If no specific input keys found, try to find the first layer that might be the input
-    const sortedKeys = Object.keys(data.visualization).sort();
-    if (sortedKeys.length > 0) {
-      return data.visualization[sortedKeys[0]!] ?? null;
+    // Look for layers with larger dimensions (typical for input spectrograms)
+    const allKeys = Object.keys(data.visualization);
+    if (allKeys.length > 0) {
+      // Sort by shape size (largest first) - input spectrograms are usually larger
+      const sortedKeys = allKeys.sort((a, b) => {
+        const shapeA = data.visualization[a]?.shape || [];
+        const shapeB = data.visualization[b]?.shape || [];
+        const sizeA = shapeA.reduce((acc, val) => acc * val, 1);
+        const sizeB = shapeB.reduce((acc, val) => acc * val, 1);
+        return sizeB - sizeA; // Largest first
+      });
+      
+      // Return the largest layer as potential input spectrogram
+      return data.visualization[sortedKeys[0]] || null;
     }
   }
   
   return null;
 };
 
-const ensure2DArray = (data: unknown, shape?: number[]): number[][] => {
-  if (!Array.isArray(data)) return [];
+const ensure2DArray = (data: any, shape?: number[]): number[][] => {
+  if (!data) return [];
   
-  if (shape && shape.length === 2) {
-    const [rows, cols] = shape;
-    if (rows && cols) {
+  // If it's already a 2D array, return it
+  if (Array.isArray(data) && Array.isArray(data[0])) {
+    return data;
+  }
+  
+  // If it's a 1D array, try to reshape it based on shape info
+  if (Array.isArray(data) && typeof data[0] === 'number') {
+    if (shape && shape.length === 2) {
+      // Reshape to 2D array
+      const [rows, cols] = shape;
       const result: number[][] = [];
       for (let i = 0; i < rows; i++) {
-        result.push((data as number[]).slice(i * cols, (i + 1) * cols));
+        result.push(data.slice(i * cols, (i + 1) * cols));
       }
       return result;
+    } else {
+      // For now, just return as a single row
+      return [data];
     }
   }
   
-  // If no valid shape provided, try to make it 2D
-  const length = (data as number[]).length;
-  const sqrt = Math.sqrt(length);
-  if (Number.isInteger(sqrt)) {
-    return ensure2DArray(data as number[], [sqrt, sqrt]);
-  }
-  
-  // Fallback: return as single row
-  return [data as number[]];
+  return [];
 };
 
 function splitLayers(visualization: VisualizationData) {
@@ -163,7 +179,7 @@ function splitLayers(visualization: VisualizationData) {
       const [parent] = name.split(".");
       if (parent === undefined) continue;
 
-      internals[parent] ??= [];
+      if (!internals[parent]) internals[parent] = [];
       internals[parent].push([name, data]);
     }
   }
@@ -179,7 +195,7 @@ export default function HomePage() {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [, setIsAudioPlaying] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [selectedFeatureMap, setSelectedFeatureMap] = useState<{
     data: number[][];
     title: string;
@@ -229,7 +245,7 @@ export default function HomePage() {
           throw new Error(`API error ${response.statusText}`);
         }
 
-        const data = await response.json() as ApiResponse;
+        const data: ApiResponse = await response.json();
         setVizData(data);
       } catch (err) {
         setError(
@@ -245,7 +261,7 @@ export default function HomePage() {
     };
   };
 
-  const { main, internals } = vizData?.visualization
+  const { main, internals } = vizData && vizData.visualization
     ? splitLayers(vizData.visualization)
     : { main: [], internals: {} };
 
@@ -274,7 +290,7 @@ export default function HomePage() {
             CNN Audio Visualizer
           </h1>
           <p className="text-md mb-8 text-stone-600">
-            Upload a WAV file to see the model&apos;s predictions and feature maps
+            Upload a WAV file to see the model's predictions and feauture maps
           </p>
 
           <div className="flex flex-col items-center">

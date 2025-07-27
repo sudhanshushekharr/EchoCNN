@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, ZoomIn, ZoomOut, RotateCcw, Download } from "lucide-react";
+import { X, ZoomIn, ZoomOut, RotateCcw, Download, Maximize2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { getColor } from "~/lib/colors";
@@ -93,7 +93,7 @@ const LayerComparison = ({ isOpen, onClose, layers }: LayerComparisonProps) => {
         const pixelX = Math.floor((localX - position.x) / zoom);
         const pixelY = Math.floor((localY - position.y) / zoom);
         
-        if (pixelX >= 0 && pixelX < (layer?.data[0]?.length ?? 0) && pixelY >= 0 && pixelY < (layer?.data.length ?? 0)) {
+        if (pixelX >= 0 && pixelX < layer.data[0]?.length && pixelY >= 0 && pixelY < layer.data.length) {
           const values = layers.map(l => l.data[pixelY]?.[pixelX] ?? 0);
           setHoveredPixel({ x: pixelX, y: pixelY, values });
         } else {
@@ -138,7 +138,7 @@ const LayerComparison = ({ isOpen, onClose, layers }: LayerComparisonProps) => {
       if (!ctx) return;
 
       const mapHeight = layer.data.length;
-      const mapWidth = layer.data[0]?.length ?? 0;
+      const mapWidth = layer.data[0]?.length || 0;
       const stats = layerStats[index];
 
       // Set canvas size
@@ -152,7 +152,7 @@ const LayerComparison = ({ isOpen, onClose, layers }: LayerComparisonProps) => {
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           const value = layer.data[y]?.[x];
-          if (value !== undefined && stats) {
+          if (value !== undefined) {
             const normalizedValue = stats.absMax === 0 ? 0 : value / stats.absMax;
             const [r, g, b] = getColor(normalizedValue);
             ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
@@ -242,9 +242,7 @@ const LayerComparison = ({ isOpen, onClose, layers }: LayerComparisonProps) => {
           {layers.map((layer, index) => (
             <div key={layer.name} className="relative border border-stone-200">
               <canvas
-                ref={(el) => {
-                  canvasRefs.current[index] = el;
-                }}
+                ref={(el) => (canvasRefs.current[index] = el)}
                 className="block w-full h-full"
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
@@ -285,13 +283,9 @@ const LayerComparison = ({ isOpen, onClose, layers }: LayerComparisonProps) => {
               return (
                 <div key={layer.name} className="space-y-1">
                   <p className="font-medium text-stone-900">{layer.title}</p>
-                  {stats && (
-                    <>
-                      <p className="text-stone-600">Range: {stats.min.toFixed(3)} to {stats.max.toFixed(3)}</p>
-                      <p className="text-stone-600">Mean: {stats.mean.toFixed(3)}</p>
-                      <p className="text-stone-600">Std: {stats.std.toFixed(3)}</p>
-                    </>
-                  )}
+                  <p className="text-stone-600">Range: {stats.min.toFixed(3)} to {stats.max.toFixed(3)}</p>
+                  <p className="text-stone-600">Mean: {stats.mean.toFixed(3)}</p>
+                  <p className="text-stone-600">Std: {stats.std.toFixed(3)}</p>
                 </div>
               );
             })}
